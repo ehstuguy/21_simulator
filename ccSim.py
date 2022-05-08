@@ -64,6 +64,18 @@ def reshuffle(num_decks):
     return deck, []
 
 
+def count_discard(discard_pile):
+    count = 0
+    for card in discard_pile:
+        if card[0] in [10, 'J', 'Q', 'K', 'A']:
+            count += -1
+        elif card[0] in [7, 8, 9]:
+            count += 0
+        elif card[0] in [2, 3, 4, 5, 6]:
+            count += 1
+    return count
+
+
 def hit(deck):
     new_card = deck[0]
     discard_pile.append(deck[0])
@@ -112,7 +124,7 @@ def deal_cards(all_playing, dealer):
     # deal first card to everyone
     for player in deal_order:
         if player.User == True:
-            player.bet = int(input('Enter a number between 5 and 50: '))
+            player.bet = int(input('Enter a number between 5 and 100: '))
         else:
             player.bet = random.randint(min_bet, max_bet)
         player.hand = []
@@ -197,15 +209,26 @@ def NPC_split(player):
 def User_turn(player):
     user_choice = choice_dict[input(
         'Choose: (Hit, Double Down, Split, or Stay) - ')]
-    if user_choice == 'Split':
-        player.split = True
-        User_split(player)
-    elif user_choice == 'Hit':
-        User_hand(player, user_choice)
-    elif user_choice == 'Double Down':
-        User_DD(player, user_choice)
-    elif user_choice == 'Stay':
-        print('User Stays')
+    resolved = False
+
+    while resolved == False:
+        if user_choice == 'Split' and player.hand[0][0] != player.hand[1][0]:
+            resolved = False
+            user_choice = choice_dict[input(
+                'Choose: (Hit, Double Down, or Stay) - ')]
+        elif user_choice == 'Split' and player.hand[0][0] == player.hand[1][0]:
+            resolved = True
+            player.split = True
+            User_split(player)
+        elif user_choice == 'Hit':
+            resolved = True
+            User_hand(player, user_choice)
+        elif user_choice == 'Double Down':
+            resolved = True
+            User_DD(player, user_choice)
+        elif user_choice == 'Stay':
+            resolved = True
+            print('User Stays')
 
 
 def User_hand(player, user_choice):
@@ -225,7 +248,7 @@ def User_hand(player, user_choice):
 def User_DD(player, user_choice):
     player.bet = player.bet * 2
     player.hand += hit(deck)
-    player.hand_value, player.bust = count_hand(player.hand)    
+    player.hand_value, player.bust = count_hand(player.hand)
 
 
 def User_split(player):
@@ -239,16 +262,17 @@ def User_split(player):
     while first_split != 'Stay':
         player.split_h1 += hit(deck)
         player.split_hv1, player.split_b1 = count_hand(player.split_h1)
-        
-        # Let player decide what to do again
-        print('\n', players_dict[player.id_tag],
-              '\t', player.split_h1)
-        first_split = choice_dict[input('Choose: (Hit or Stay) - ')]
-        
+
         # End if player busts
         if player.split_b1 == True:
             print('Bust on first split!')
             first_split = 'Stay'
+        else:
+            # Let player decide what to do again
+            print('\n', players_dict[player.id_tag],
+                  '\t', player.split_h1)
+            first_split = choice_dict[input('Choose: (Hit or Stay) - ')]
+
 
     print('\n', players_dict[player.id_tag], '\t', player.split_h2)
     second_split = choice_dict[input('Choose: Hit or Stay')]
@@ -256,15 +280,16 @@ def User_split(player):
         print('\n', players_dict[player.id_tag],
               '\t', player.split_h2)
         second_split = choice_dict[input('Choose: (Hit or Stay) - ')]
-        
-        # Let player decide what to do again
-        player.split_h2 += hit(deck)
-        player.split_hv2, player.split_b2 = count_hand(player.split_h2)
-        
+
         # End if player busts
         if player.split_b2 == True:
             print('Bust on second split!')
             second_split = 'Stay'
+        else:
+            # Let player decide what to do again
+            player.split_h2 += hit(deck)
+            player.split_hv2, player.split_b2 = count_hand(player.split_h2)
+
 
 
 # ========================================================================
@@ -289,7 +314,7 @@ def compare_hand(player, dealer):
     else:
         dealer.money = dealer.money + player.bet
         player.money = player.money - player.bet
-        
+
 
 def compare_player_split(player, dealer):
     if player.split_b1 == True:
@@ -318,31 +343,23 @@ def compare_player_split(player, dealer):
     else:
         dealer.money = dealer.money - player.bet
         player.money = player.money + player.bet
-    
+
 
 def compare_dealer_split(player, dealer):
     if player.blackjack == True and dealer.blackjack == False:
         dealer.money = dealer.money - player.bet * 1.5
         player.money = player.money + player.bet * 1.5
-    elif player.blackjack == True and dealer.blackjack == True:
-        dealer.money = dealer.money
-        player.money = player.money
     elif player.bust == True:
         dealer.money = dealer.money + player.bet
         player.money = player.money - player.bet
-    elif dealer.split_b1 == True \
-         and dealer.split_b1 == True:
+    elif player.hand > dealer.split_hv1 and player.hand > dealer.split_hv2:
         dealer.money = dealer.money - player.bet
         player.money = player.money + player.bet
-    elif dealer.split_hv1 >= player.hand \
-         or dealer.split_hv2 >= player.hand:
+    else:
         dealer.money = dealer.money + player.bet
         player.money = player.money - player.bet
-    else:
-        dealer.money = dealer.money - player.bet
-        player.money = player.money + player.bet
-    
-            
+
+
 def compare_both_split(player, dealer):
     if player.split_b1 == True:
         dealer.money = dealer.money + player.bet
@@ -444,6 +461,7 @@ if __name__ == "__main__":
                 else:
                     pass
 
+        print('\n\n', discard_pile, '\n', count_discard(discard_pile), '\n\n')
         # reshuffle feature
         if len(deck) < random.randint(36, 70):
             deck, discard_pile = reshuffle(num_decks)
