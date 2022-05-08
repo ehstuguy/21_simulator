@@ -1,4 +1,4 @@
-# # # #!/your/own/shebang/here
+#!/usr/bin/env python3
 
 # libraries needed
 import random
@@ -88,25 +88,36 @@ def count_hand(player_hand):
     # create initial variables
     aces = 0
     hand_value = 0
+    first_ace = False
+
+    print(hand)
+
     # counts each card in hand and adding to initial value of '0'
     for card, suit in hand:
-        if card == 'A':
-            aces += 1
-            hand_value += 11
-        elif card != 'A' and type(card) == str:
-            hand_value += 10
-        elif type(card) == int:
-            hand_value += card
+        print(hand_value)
 
-    # makes sure aces get counted properly
-    if aces > 0 and hand_value > 21:
-        hand_value = hand_value - (aces * 10)
+        if card in [10, 'Q', 'J', 'K']:
+            hand_value += 10
+            if hand_value > 21 and aces == 1 and first_ace == False:
+                hand_value += -10
+                first_ace = True
+        elif card == 'A' and hand_value > 11:
+            hand_value += 1
+            aces += 1
+            first_ace = True
+        elif card == 'A' and hand_value < 11:
+            hand_value += 11
+            aces += 1        
+        else:
+            hand_value += card
+            if hand_value > 11 and aces == 1 and first_ace == False:
+                hand_value += -10
+                first_ace = True
 
     if hand_value > 21:
         bust = True
     else:
         bust = False
-
     return hand_value, bust
 
 
@@ -124,7 +135,7 @@ def deal_cards(all_playing, dealer):
     # deal first card to everyone
     for player in deal_order:
         if player.User == True:
-            player.bet = int(input('Enter a number between 5 and 100: '))
+            player.bet = correctr_user_bet()
         else:
             player.bet = random.randint(min_bet, max_bet)
         player.hand = []
@@ -141,6 +152,27 @@ def deal_cards(all_playing, dealer):
         player.hand_value, player.bust = count_hand(player.hand)
 
 
+def correctr_user_bet():
+    correct_bet = False
+    while correct_bet == False:
+        bet_amount = int(
+            input('Enter a number between $ 5 and $ 100: '))
+
+        if bet_amount < 5:
+            bet_amount = int(
+                input('\n\nBet is TOO LOW, please bet between '
+                      '$ 5 and $ 100: '))
+            correct_bet = False
+        elif bet_amount > 100:
+            bet_amount = int(
+                input('\n\nBet is TOO HIGH, please bet between '
+                      '$ 5 and $ 100: '))
+            correct_bet = False
+        else:
+            correct_bet = True
+    return bet_amount
+
+
 # Whose turn is it anyway?
 # ========================================================================
 
@@ -149,6 +181,8 @@ def take_turns(player):
 
     if len(player.hand) == 2 and player.hand_value == 21:
         player.blackjack = True
+        if player.User == True:
+            print('\n\\nBlackJack!\n\n')
     else:
         player.blackjack = False
 
@@ -258,6 +292,7 @@ def User_split(player):
     player.split_hv2, player.split_b2 = count_hand(player.split_h2)
 
     print('\n', players_dict[player.id_tag], '\t', player.split_h1)
+    print("User's first split\n")
     first_split = choice_dict[input('Choose: (Hit or Stay) - ')]
     while first_split != 'Stay':
         player.split_h1 += hit(deck)
@@ -275,6 +310,7 @@ def User_split(player):
 
 
     print('\n', players_dict[player.id_tag], '\t', player.split_h2)
+    print("User's second split\n")
     second_split = choice_dict[input('Choose: Hit or Stay')]
     while second_split != 'Stay':
         print('\n', players_dict[player.id_tag],
@@ -346,13 +382,19 @@ def compare_player_split(player, dealer):
 
 
 def compare_dealer_split(player, dealer):
-    if player.blackjack == True and dealer.blackjack == False:
+    if player.blackjack == True:
         dealer.money = dealer.money - player.bet * 1.5
         player.money = player.money + player.bet * 1.5
     elif player.bust == True:
         dealer.money = dealer.money + player.bet
         player.money = player.money - player.bet
-    elif player.hand > dealer.split_hv1 and player.hand > dealer.split_hv2:
+    elif dealer.split_b1 == True and dealer.split_b2 == True:
+        dealer.money = dealer.money - player.bet
+        player.money = player.money + player.bet
+    elif dealer.split_b1 == True and dealer.split_hv2 < player.hand_value:
+        dealer.money = dealer.money - player.bet
+        player.money = player.money + player.bet
+    elif dealer.split_b2 == True and dealer.split_hv1 < player.hand_value:
         dealer.money = dealer.money - player.bet
         player.money = player.money + player.bet
     else:
@@ -386,7 +428,7 @@ def print_after_deal(all_playing, dealer):
     for player in deal_order:
         print(players_dict[player.id_tag], '\t', player.hand,
               '  ', player.hand_value)
-    print(players_dict[dealer.id_tag], '\t', [player.hand[0]])
+    print(players_dict[dealer.id_tag], '\t', [dealer.hand[0]])
 
 
 def print_after_turn(all_playing, dealer):
@@ -461,7 +503,7 @@ if __name__ == "__main__":
                 else:
                     pass
 
-        print('\n\n', discard_pile, '\n', count_discard(discard_pile), '\n\n')
+        print('\n\n', discard_pile, '\n\n', count_discard(discard_pile))
         # reshuffle feature
         if len(deck) < random.randint(36, 70):
             deck, discard_pile = reshuffle(num_decks)

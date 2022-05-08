@@ -246,11 +246,13 @@ def User_turn(player):
     resolved = False
 
     while resolved == False:
-        if user_choice == 'Split' and player.hand[0][0] != player.hand[1][0]:
+        if user_choice == 'Split' \
+           and player.hand[0][0] != player.hand[1][0]:
             resolved = False
             user_choice = choice_dict[input(
                 'Choose: (Hit, Double Down, or Stay) - ')]
-        elif user_choice == 'Split' and player.hand[0][0] == player.hand[1][0]:
+        elif user_choice == 'Split' \
+             and player.hand[0][0] == player.hand[1][0]:
             resolved = True
             player.split = True
             User_split(player)
@@ -311,11 +313,10 @@ def User_split(player):
 
     print('\n', players_dict[player.id_tag], '\t', player.split_h2)
     print("User's second split\n")
-    second_split = choice_dict[input('Choose: Hit or Stay')]
+    second_split = choice_dict[input('Choose: (Hit or Stay) - ')]
     while second_split != 'Stay':
-        print('\n', players_dict[player.id_tag],
-              '\t', player.split_h2)
-        second_split = choice_dict[input('Choose: (Hit or Stay) - ')]
+        player.split_h2 += hit(deck)
+        player.split_hv2, player.split_b2 = count_hand(player.split_h2)
 
         # End if player busts
         if player.split_b2 == True:
@@ -323,8 +324,10 @@ def User_split(player):
             second_split = 'Stay'
         else:
             # Let player decide what to do again
-            player.split_h2 += hit(deck)
-            player.split_hv2, player.split_b2 = count_hand(player.split_h2)
+            print('\n', players_dict[player.id_tag],
+                  '\t', player.split_h2)
+            second_split = choice_dict[input('Choose: (Hit or Stay) - ')]
+
 
 
 
